@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 import os
+from typing import List
 
 class PointNetDataset(Dataset):
     def __init__(
