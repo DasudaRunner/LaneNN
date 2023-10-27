@@ -21,4 +21,21 @@ class Points(object):
 
 class Grid(object):
     def __init__(self, h, w, grid_h, grid_w) -> None:
-        
+        self._grid = []
+        self.grid_h = grid_h
+        self.grid_w = grid_w
+        grid_num_h = h // grid_h
+        grid_num_w = w // grid_w
+        # init grid param
+        for i in range(grid_num_h):
+            _temp = []
+            for j in range(grid_num_w):
+                _temp.append([])
+            self._grid.append(_temp)
+    
+    def map2index(self, pts: Point) -> List:
+        h_idx = int(pts.y / self.grid_h)
+        w_idx = int(pts.x / self.grid_w)
+    
+    def add2grid(self, pts: Point) -> None:
+        pass

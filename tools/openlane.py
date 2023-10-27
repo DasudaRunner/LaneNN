@@ -35,10 +35,10 @@ if __name__ == '__main__':
         #         white_image[i[0], i[1]] = 
         
         plt.clf()
-        # plt.xlim([0, 1920])
-        # plt.ylim([0, 1280])
+        plt.xlim([0, 1920])
+        plt.ylim([0, 1280])
         for _vis in vis_lines:
-            plt.scatter(_vis[0, :], -_vis[1, :],s=3)
+            plt.scatter(_vis[0, :], 1280-_vis[1, :],s=3)
         
         plt.savefig(f'results/{os.path.basename(s_fpath)}.png', dpi=400)
     
