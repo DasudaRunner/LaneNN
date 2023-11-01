@@ -1,7 +1,6 @@
-from typing import List
+from typing import List, Dict
 import numpy as np
 import random
-
 
 class Point(object):
     def __init__(self, x, y, type=-1, valid=-1) -> None:
@@ -98,6 +97,17 @@ class Grid(object):
 
         return feature
 
+    def to_global(self, point: Point):
+        p = Point(x=point.x, y=point.y, type=point.type, valid=point.valid)
+        p.x *= self.grid_size / 2
+        p.y *= self.grid_size / 2
+
+        p.x += self.center_x
+        p.y += self.center_y
+
+        return p
+
+
 class Map(object):
     def __init__(
         self, 
@@ -113,13 +123,8 @@ class Map(object):
         self.grid_size = grid_size
         self.point_limit = point_limit
 
-        self.max_x = (grid_x_num - 0.5) * grid_size
-        self.max_y = ((grid_y_num // 2) + 0.5) * grid_size
-        self.min_x = -0.5 * grid_size
-        self.min_y = -self.max_y
-
         self.point_cnt = 0
-        self.memo = {}
+        self.memo: Dict[str, Grid] = {}
         for i in range(grid_x_num):
             for j in range(grid_y_num):
                 self.memo[f'{i}-{j}'] = Grid(
@@ -141,7 +146,7 @@ class Map(object):
                   type: None, 
                   valid: None) -> None:
         xidx, yidx = self.get_index(x, y)
-        # print("x: {}, y: {}, index: {}".format(x, y, index.value()))
+        print(f'index is {xidx}, {yidx}')
         grid = self.memo[f'{xidx}-{yidx}']
         grid.add_point(Point(x, y, type, valid))
         self.point_cnt += 1
@@ -160,46 +165,27 @@ class Map(object):
         feature = np.concatenate(lfeats, axis=1)
         return feature
 
+    def valid_grid_num(self):
+        cnt = 0
+        for _, grid in self.memo.items():
+            if grid.point_num() > 0:
+                cnt += 1
+        return cnt
+    def valid_point_num(self):
+        cnt = 0
+        for _, grid in self.memo.items():
+            cnt += grid.valid_point_num()
+        return cnt
 
-
-class Grid(object):
-    def __init__(self, h, w, grid_h, grid_w) -> None:
-        self._grid = []
-        self.grid_h = grid_h
-        self.grid_w = grid_w
-        grid_num_h = h // grid_h
-        grid_num_w = w // grid_w
-        # init grid param
-        for i in range(grid_num_h):
-            _temp = []
-            for j in range(grid_num_w):
-                _temp.append(Points([]))
-            self._grid.append(_temp)
-    
-    def map2index(self, pts: Point) -> List:
-        h_idx = int(pts.y / self.grid_h)
-        w_idx = int(pts.x / self.grid_w)
-        return h_idx, w_idx
-         
-    def add2grid(self, pts: Point) -> None:
-        _hidx, _widx = self.map2index(pts)
-        # print(_hidx, _widx)
-        self._grid[_hidx][_widx].add_pts(pts)
-    
-    def 
-    
-    def show_grid(self) -> None:
-        for i in self._grid:
-            for j in i:
-                print(j)
 
 if __name__ == '__main__':
-    demo = Map(10, 10, 5, point_limit=2)
-    demo.add_point(Point(x=6, y=2))
-    demo.add_point(Point(x=9, y=2))
-    demo.add_point(Point(x=1, y=2))
-    demo.add_point(Point(x=6, y=6))
+    demo = Map(2, 2, 5, point_limit=2)
+    demo.add_point(x=6, y=2, type=-1, valid=-1)
+    # demo.add_point(Point(x=9, y=2))
+    # demo.add_point(Point(x=1, y=2))
+    # demo.add_point(Point(x=6, y=6))
     
     res = demo.get_feature()
+    print(res.shape)
     print(res)
     
