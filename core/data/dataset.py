@@ -30,12 +30,18 @@ class OpenLaneDataset(Dataset):
         _json = load_json(json_file)
         all_lines = _json['lane_lines']
         new_lines = []
-        for sline in all_lines:
+        all_category = []
+        for idx, sline in enumerate(all_lines):
             category = sline['category']
-            coord = sline['uv']
+            coord = sline['uv'] # 2*n
+            all_category.append*(category)
             new_lines.append({'category': category, 'coord': coord})
         # TODO 
         # 生成新的label
+        gt = 0
+        if 20 in all_category:
+            gt = 1
+        
         return new_lines
     
     def __getitem__(self, idx=None):
