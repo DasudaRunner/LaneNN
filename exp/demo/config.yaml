@@ -7,7 +7,6 @@ common:
   bs: 2
   works: 0
 
-
 dataset:
   type: OpenLaneDataset
   data_list: openlane/curve_case.list

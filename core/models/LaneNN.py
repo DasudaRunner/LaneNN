@@ -77,9 +77,8 @@ class ResBlock(nn.Module):
     def forward(self, x):
         return self.relu(self.net(x) + self.shortcut(x))
 
-'''
 point_base_channel = 16
-class LaneModel(nn.Module):
+class LaneModelCls(nn.Module):
     def __init__(
         self,
         grid_point_num: int,
@@ -88,7 +87,7 @@ class LaneModel(nn.Module):
         input_channel: int = 4,
         multi_maxpool: bool = False,
     ):
-        super(LaneModel, self).__init__()
+        super(LaneModelCls, self).__init__()
 
         self.grid_height = grid_height
         self.grid_width = grid_width
@@ -151,19 +150,17 @@ class LaneModel(nn.Module):
         x = self.linear1(x)
 
         return x
-'''
 
-point_base_channel = 16
-class LaneModel(nn.Module):
+
+class LaneModelSeg(nn.Module):
     def __init__(
         self,
         grid_point_num: int,
         grid_height: int,
         grid_width: int,
-        input_channel: int = 4,
-        multi_maxpool: bool = False,
+        input_channel: int = 4
     ):
-        super(LaneModel, self).__init__()
+        super(LaneModelSeg, self).__init__()
 
         self.grid_height = grid_height
         self.grid_width = grid_width
@@ -172,6 +169,10 @@ class LaneModel(nn.Module):
             input_channel=input_channel, base_channel=point_base_channel
         )
         self.max_pool = nn.MaxPool2d((1, grid_point_num))
+        
+        
+        
+        
 
         conv_base_channel = point_base_channel * 4
         self.conv1 = nn.Conv2d(
@@ -205,6 +206,8 @@ class LaneModel(nn.Module):
         x = self.max_pool(x) # [bs, 64, M*N, 1]
         x = x.view(x.shape[0], x.shape[1], self.grid_height, self.grid_width) # [bs, 64, M, N]
 
+        
+        
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu1(x)
@@ -220,6 +223,7 @@ class LaneModel(nn.Module):
         x = self.linear1(x)
 
         return x
+
 
 if __name__ == '__main__':
     pass
