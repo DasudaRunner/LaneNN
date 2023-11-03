@@ -143,10 +143,9 @@ class Map(object):
     def add_point(self, 
                   x: float, 
                   y: float, 
-                  type: None, 
-                  valid: None) -> None:
+                  type = None, 
+                  valid = None) -> None:
         xidx, yidx = self.get_index(x, y)
-        print(f'index is {xidx}, {yidx}')
         grid = self.memo[f'{xidx}-{yidx}']
         grid.add_point(Point(x, y, type, valid))
         self.point_cnt += 1

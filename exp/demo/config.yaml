@@ -1,8 +1,17 @@
 common:
-  pass: 
+  seed: 3072
+
+  trainer: OpenLaneTrainer
+
+  max_iters: 100
+  bs: 2
+  works: 0
+
 
 dataset:
+  type: OpenLaneDataset
   data_list: openlane/curve_case.list
   data_prefix: /Users/wanghaibo/workspace/temp/openlane/lane3d_300/test/extreme_weather_case
-  max_points_in_grid: 64
-  
+  max_points_in_grid: 16
+
+

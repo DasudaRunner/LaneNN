@@ -27,6 +27,10 @@ share/python-wheels/
 MANIFEST
 
 results/
+exp/
+
+!exp/demo/config.yaml
+!exp/demo/train.sh
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

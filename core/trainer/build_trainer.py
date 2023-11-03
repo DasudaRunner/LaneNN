@@ -1,6 +1,5 @@
-from .base_trainer import MultitaskContrastTrainer
-
+from .openlane_trainer import OpenLaneTrainer
 
 def build_trainer(C):
-    dist_print(f"Trainer: {C.config['common']['trainer']}")
-    return globals()[C.config['common']['trainer']](C)
+    print(f"Trainer: {C['common']['trainer']}")
+    return globals()[C['common']['trainer']](C)

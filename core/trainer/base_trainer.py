@@ -10,6 +10,8 @@ import pdb
 import time
 import gc
 
+from easydict import EasyDict as edict
+
 import shutil
 import random
 
@@ -25,8 +27,7 @@ class WorkerInit(object):
 class BaseTrainer(object):
     """class for BaseTrainer"""
     def __init__(self, C):
-        self.C = C
-        self.config = C.config
+        self.config = C
 
         self.mixPrecision = self.config['common'].get('mixPrecision', 'fp16')
         self.init_path()
@@ -39,10 +40,13 @@ class BaseTrainer(object):
         self.tb_freq = self.config['common'].get('tb_freq', 100)
 
         self.last_iter = -1
+        
+        self.tmp = edict()
 
     def set_seed(self):
-        seed = self.C.config['common']['seed']
-        works = self.C.config['common']['works']
+        config = self.config
+        seed = config['common']['seed']
+        works = config['common']['works']
         
         worker_init = WorkerInit(works)
         self.worker_init_fn = worker_init.func
@@ -55,7 +59,7 @@ class BaseTrainer(object):
 
     def create_model(self):
         pass
-    
+
     def create_dataloader(self):
         pass
     
@@ -68,16 +72,16 @@ class BaseTrainer(object):
     def init_path(self):
         config = self.config
         
-        save_path = config.get('save_path', os.path.dirname(self.C.config_file))
+        save_path = config.get('save_path', os.path.dirname(self.config['config_file']))
         event_path = osp.join(save_path, 'events')
         ckpt_path = osp.join(save_path, 'checkpoints')
-        if self.C.rank == 0:
-            if not os.path.exists(event_path):
-                os.makedirs(event_path)
-            if not os.path.exists(ckpt_path):
-                os.makedirs(ckpt_path)
-            shutil.copy(self.C.config_file, ckpt_path)
 
-            self.tb_logger = SummaryWriter(log_dir=event_path, flush_secs=10)
+        if not os.path.exists(event_path):
+            os.makedirs(event_path)
+        if not os.path.exists(ckpt_path):
+            os.makedirs(ckpt_path)
+        shutil.copy(self.config['config_file'], ckpt_path)
+
+        self.tb_logger = SummaryWriter(log_dir=event_path, flush_secs=10)
 
         self.ckpt_path = ckpt_path

@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 
 def gen_openlane_list():
-    json_dir = '/Users/wanghaibo/workspace/temp/openlane/lane3d_300/test/curve_case'
+    json_dir = '/Users/wanghaibo/workspace/temp/openlane/lane3d_300/test/extreme_weather_case'
     all_fpath = []
     for fpath in os.listdir(json_dir):
         if fpath == '.DS_Store':

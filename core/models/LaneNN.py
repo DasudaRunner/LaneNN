@@ -3,6 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class PointBlock(nn.Module):
+    '''
+    input_channel: 输入通道
+    base_channel: 中间层通道基数
+    output_channel: base_channel * 4
+    '''
     def __init__(self, input_channel: int = 4, base_channel=16):
         super(PointBlock, self).__init__()
         self.conv1 = torch.nn.Conv2d(input_channel, base_channel, 1)
@@ -17,7 +22,6 @@ class PointBlock(nn.Module):
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
         return x
-
 
 class ResBlock(nn.Module):
     def __init__(
@@ -73,8 +77,9 @@ class ResBlock(nn.Module):
     def forward(self, x):
         return self.relu(self.net(x) + self.shortcut(x))
 
-
-class Model(nn.Module):
+'''
+point_base_channel = 16
+class LaneModel(nn.Module):
     def __init__(
         self,
         grid_point_num: int,
@@ -83,7 +88,7 @@ class Model(nn.Module):
         input_channel: int = 4,
         multi_maxpool: bool = False,
     ):
-        super(Model, self).__init__()
+        super(LaneModel, self).__init__()
 
         self.grid_height = grid_height
         self.grid_width = grid_width
@@ -126,9 +131,10 @@ class Model(nn.Module):
         self.linear1 = nn.Linear(conv_base_channel * 4, 2)
 
     def forward(self, x):
-        x = self.point_feature_module(x)
-        x = self.max_pool(x)
-        x = x.view(x.shape[0], x.shape[1], self.grid_height, self.grid_width)
+        # x: [bs, 4, M*N, dim]
+        x = self.point_feature_module(x) # [bs, 64, M*N, dim]
+        x = self.max_pool(x) # [bs, 64, M*N, 1]
+        x = x.view(x.shape[0], x.shape[1], self.grid_height, self.grid_width) # [bs, 64, M, N]
 
         x = self.conv1(x)
         x = self.bn1(x)
@@ -137,10 +143,83 @@ class Model(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
 
-        x = self.max_pool2_1(x)
-        x = self.max_pool2_2(x)
+        # x = self.max_pool2_1(x)
+        # x = self.max_pool2_2(x)
+        x = self.max_pool2(x)
 
         x = x.view(x.shape[0], -1)
         x = self.linear1(x)
 
         return x
+'''
+
+point_base_channel = 16
+class LaneModel(nn.Module):
+    def __init__(
+        self,
+        grid_point_num: int,
+        grid_height: int,
+        grid_width: int,
+        input_channel: int = 4,
+        multi_maxpool: bool = False,
+    ):
+        super(LaneModel, self).__init__()
+
+        self.grid_height = grid_height
+        self.grid_width = grid_width
+
+        self.point_feature_module = PointBlock(
+            input_channel=input_channel, base_channel=point_base_channel
+        )
+        self.max_pool = nn.MaxPool2d((1, grid_point_num))
+
+        conv_base_channel = point_base_channel * 4
+        self.conv1 = nn.Conv2d(
+            in_channels=conv_base_channel,
+            out_channels=conv_base_channel,
+            kernel_size=(5, 1), 
+            stride=(2, 1),
+            padding=(0, 0),
+        )
+        self.bn1 = nn.BatchNorm2d(conv_base_channel)
+        self.relu1 = nn.ReLU(inplace=True)
+
+        self.layer1 = ResBlock(
+            n_inputs=conv_base_channel, n_outputs=conv_base_channel * 2, stride=2
+        )
+        self.layer2 = ResBlock(
+            n_inputs=conv_base_channel * 2, n_outputs=conv_base_channel * 4, stride=2
+        )
+
+        self.max_pool2 = nn.MaxPool2d((3, 2))
+        self.max_pool2_1 = nn.MaxPool2d((2, 2), padding=(1, 0))
+        self.max_pool2_2 = nn.MaxPool2d((2, 1))
+
+        self.linear1 = nn.Linear(conv_base_channel * 4, 2)
+
+    def forward(self, x):
+        '''
+        x: [bs, 4, M*N, dim]
+        '''
+        x = self.point_feature_module(x) # [bs, 64, M*N, dim]
+        x = self.max_pool(x) # [bs, 64, M*N, 1]
+        x = x.view(x.shape[0], x.shape[1], self.grid_height, self.grid_width) # [bs, 64, M, N]
+
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu1(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+
+        # x = self.max_pool2_1(x)
+        # x = self.max_pool2_2(x)
+        x = self.max_pool2(x)
+
+        x = x.view(x.shape[0], -1)
+        x = self.linear1(x)
+
+        return x
+
+if __name__ == '__main__':
+    pass
