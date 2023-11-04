@@ -6,6 +6,7 @@ from core.data.grid import Map
 import os
 import os.path as osp
 from typing import List
+from tqdm import tqdm
 
 class OpenLaneDataset(Dataset):
     def __init__(self, config):
@@ -20,10 +21,10 @@ class OpenLaneDataset(Dataset):
         
     def _preload(self):
         all_data = []
-        _data = read_list(self.data_list)[:10]
+        _data = read_list(self.data_list) # [:10]
         if self.data_prefix:
             _data = [osp.join(self.data_prefix, i) for i in _data]
-        for _val in _data:
+        for _val in tqdm(_data):
             all_data.append(self.parse_openlane(_val))
         return all_data
         
@@ -38,16 +39,16 @@ class OpenLaneDataset(Dataset):
             all_category.append(category)
             for pts_idx in range(len(coord[0])):
                 ori_x = coord[0][pts_idx]
-                ori_y = 1280-coord[1][pts_idx]
+                ori_y = coord[1][pts_idx]
                 norm_x = ori_x / 1920 * 1280
                 norm_y = ori_y / 1280 * 1280
                 new_lines.append([norm_x, norm_y, idx])
         # TODO 
         # 生成新的label
         gt = 0
-        if 20 in all_category:
+        if len(new_lines) >7:
             gt = 1
-        map = Map(128, 128, 10, 64)
+        map = Map(128, 128, 10, self.max_points_in_grid)
         for d in new_lines:
             map.add_point(d[0], d[1], type=d[2], valid=1)
         return map, gt

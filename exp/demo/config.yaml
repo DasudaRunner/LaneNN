@@ -3,14 +3,30 @@ common:
 
   trainer: OpenLaneTrainer
 
-  max_iters: 100
-  bs: 2
+  epoch: 10
+  bs: 4
   works: 0
+
+  lr: 0.001
+
+grid:
+  max_points_in_grid: 32
+  grid_height: 128
+  grid_width: 128
 
 dataset:
   type: OpenLaneDataset
-  data_list: openlane/curve_case.list
-  data_prefix: /Users/wanghaibo/workspace/temp/openlane/lane3d_300/test/extreme_weather_case
-  max_points_in_grid: 16
+  kwargs:
+    data_list: openlane/curve_case.list
+    data_prefix: /Users/haibo/workspace/dataset/lane3d_300/training
+  
+model:
+  type: LaneModelCls # LaneModelCls LaneModelSeg
+  kwargs: 
+    input_channel: 4
+
+
+
+
 
 

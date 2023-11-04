@@ -1,6 +1,8 @@
 import os
 import sys
 import numpy as np
+import json
+from typing import Dict
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -23,3 +25,6 @@ class AverageMeter(object):
 
         self.val = val
         self.avg = np.mean(self.history)
+        
+def print_json(data: Dict):
+    print(json.dumps(data, indent=4))

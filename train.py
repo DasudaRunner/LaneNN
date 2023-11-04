@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from utils.misc import load_yaml
 import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 import argparse
 
 from core.trainer.build_trainer import build_trainer

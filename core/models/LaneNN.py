@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from core.models.unet import SimpleUNet
+
 class PointBlock(nn.Module):
     '''
     input_channel: 输入通道
@@ -81,7 +83,7 @@ point_base_channel = 16
 class LaneModelCls(nn.Module):
     def __init__(
         self,
-        grid_point_num: int,
+        max_points_in_grid: int,
         grid_height: int,
         grid_width: int,
         input_channel: int = 4,
@@ -95,23 +97,23 @@ class LaneModelCls(nn.Module):
         self.point_feature_module = PointBlock(
             input_channel=input_channel, base_channel=point_base_channel
         )
-        # self.max_pool = nn.MaxPool2d((1, grid_point_num))
+        self.max_pool = nn.MaxPool2d((1, max_points_in_grid))
 
-        layers = []
-        if multi_maxpool:
-            for _ in range(6):
-                layers.append(nn.MaxPool2d((1, 2), stride=(1, 2)))
-            self.max_pool = nn.Sequential(*layers)
-        else:
-            self.max_pool = nn.MaxPool2d((1, grid_point_num))
+        # layers = []
+        # if multi_maxpool:
+        #     for _ in range(6):
+        #         layers.append(nn.MaxPool2d((1, 2), stride=(1, 2)))
+        #     self.max_pool = nn.Sequential(*layers)
+        # else:
+        #     self.max_pool = nn.MaxPool2d((1, max_points_in_grid))
 
         conv_base_channel = point_base_channel * 4
         self.conv1 = nn.Conv2d(
             in_channels=conv_base_channel,
             out_channels=conv_base_channel,
-            kernel_size=(5, 1),
-            stride=(2, 1),
-            padding=(0, 0),
+            kernel_size=(3, 3),
+            stride=(2, 2),
+            padding=(1, 1),
         )
         self.bn1 = nn.BatchNorm2d(conv_base_channel)
         self.relu1 = nn.ReLU(inplace=True)
@@ -122,15 +124,21 @@ class LaneModelCls(nn.Module):
         self.layer2 = ResBlock(
             n_inputs=conv_base_channel * 2, n_outputs=conv_base_channel * 4, stride=2
         )
+        self.layer3 = ResBlock(
+            n_inputs=conv_base_channel * 4, n_outputs=conv_base_channel * 8, stride=2
+        )
 
-        self.max_pool2 = nn.MaxPool2d((3, 2))
-        self.max_pool2_1 = nn.MaxPool2d((2, 2), padding=(1, 0))
-        self.max_pool2_2 = nn.MaxPool2d((2, 1))
+        # self.max_pool2 = nn.MaxPool2d((3, 2))
+        # self.max_pool2_1 = nn.MaxPool2d((2, 2), padding=(1, 0))
+        # self.max_pool2_2 = nn.MaxPool2d((2, 1))
+        
+        self.max_pool2 = nn.AdaptiveAvgPool2d(1)
 
-        self.linear1 = nn.Linear(conv_base_channel * 4, 2)
+        self.linear1 = nn.Linear(conv_base_channel * 8, 2)
 
     def forward(self, x):
         # x: [bs, 4, M*N, dim]
+        output = {}
         x = self.point_feature_module(x) # [bs, 64, M*N, dim]
         x = self.max_pool(x) # [bs, 64, M*N, 1]
         x = x.view(x.shape[0], x.shape[1], self.grid_height, self.grid_width) # [bs, 64, M, N]
@@ -141,6 +149,7 @@ class LaneModelCls(nn.Module):
 
         x = self.layer1(x)
         x = self.layer2(x)
+        x = self.layer3(x)
 
         # x = self.max_pool2_1(x)
         # x = self.max_pool2_2(x)
@@ -149,13 +158,13 @@ class LaneModelCls(nn.Module):
         x = x.view(x.shape[0], -1)
         x = self.linear1(x)
 
-        return x
-
+        output['pred'] = x
+        return output
 
 class LaneModelSeg(nn.Module):
     def __init__(
         self,
-        grid_point_num: int,
+        max_points_in_grid: int,
         grid_height: int,
         grid_width: int,
         input_channel: int = 4
@@ -168,61 +177,27 @@ class LaneModelSeg(nn.Module):
         self.point_feature_module = PointBlock(
             input_channel=input_channel, base_channel=point_base_channel
         )
-        self.max_pool = nn.MaxPool2d((1, grid_point_num))
+        self.max_pool = nn.MaxPool2d((1, max_points_in_grid))
         
+        self.unet = SimpleUNet(in_ch=point_base_channel * 4, out_ch=2, base_chn=64)
         
-        
-        
-
-        conv_base_channel = point_base_channel * 4
-        self.conv1 = nn.Conv2d(
-            in_channels=conv_base_channel,
-            out_channels=conv_base_channel,
-            kernel_size=(5, 1), 
-            stride=(2, 1),
-            padding=(0, 0),
-        )
-        self.bn1 = nn.BatchNorm2d(conv_base_channel)
-        self.relu1 = nn.ReLU(inplace=True)
-
-        self.layer1 = ResBlock(
-            n_inputs=conv_base_channel, n_outputs=conv_base_channel * 2, stride=2
-        )
-        self.layer2 = ResBlock(
-            n_inputs=conv_base_channel * 2, n_outputs=conv_base_channel * 4, stride=2
-        )
-
-        self.max_pool2 = nn.MaxPool2d((3, 2))
-        self.max_pool2_1 = nn.MaxPool2d((2, 2), padding=(1, 0))
-        self.max_pool2_2 = nn.MaxPool2d((2, 1))
-
-        self.linear1 = nn.Linear(conv_base_channel * 4, 2)
-
     def forward(self, x):
         '''
         x: [bs, 4, M*N, dim]
         '''
+        output = {}
         x = self.point_feature_module(x) # [bs, 64, M*N, dim]
+        # print(x.shape)
         x = self.max_pool(x) # [bs, 64, M*N, 1]
+        # print(x.shape)
+        # print(self.grid_height, self.grid_width)
         x = x.view(x.shape[0], x.shape[1], self.grid_height, self.grid_width) # [bs, 64, M, N]
 
+        x = self.unet(x)
         
-        
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu1(x)
+        output['pred'] = x
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-
-        # x = self.max_pool2_1(x)
-        # x = self.max_pool2_2(x)
-        x = self.max_pool2(x)
-
-        x = x.view(x.shape[0], -1)
-        x = self.linear1(x)
-
-        return x
+        return output
 
 
 if __name__ == '__main__':

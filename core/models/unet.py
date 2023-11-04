@@ -3,7 +3,6 @@ import torch.nn.functional as F
 import torch.utils.data
 import torch
 
-
 class conv_block(nn.Module):
     """
     Convolution Block 
@@ -77,19 +76,15 @@ class SimpleUNet(nn.Module):
     def forward(self, x):
         # x: [bs, 64, M, N]
         e1 = self.Conv1(x) # [bs, 64, M, N]
-        print(e1.shape)
 
         e2 = self.Maxpool1(e1) # [bs, 64, M/2, N/2]
         e2 = self.Conv2(e2) # [bs, 128, M/2, N/2]
-        print(e2.shape)
 
         e3 = self.Maxpool2(e2) # [bs, 128, M/4, N/4]
         e3 = self.Conv3(e3) # [bs, 256, M/4, N/4]
-        print(e3.shape)
 
         e4 = self.Maxpool3(e3) # [bs, 256, M/8, N/8]
         e4 = self.Conv4(e4) # [bs, 512, M/8, N/8]
-        print(e4.shape)
 
         # decoder
         d4 = self.Up4(e4)
