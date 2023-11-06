@@ -93,7 +93,7 @@ class Grid(object):
             feature[3, 0, i] = points[idx].valid
 
         feature[0:2, 0, :] /= self.grid_size / 2
-        feature[2, 0, :] /= 10.0 # TODO
+        # feature[2, 0, :] /= 10.0 # TODO
 
         return feature
 

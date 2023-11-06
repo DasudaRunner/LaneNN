@@ -7,6 +7,9 @@ import os
 import os.path as osp
 from typing import List
 from tqdm import tqdm
+import pdb
+
+from utils.my_math import _interp1d
 
 class OpenLaneDataset(Dataset):
     def __init__(self, config):
@@ -16,6 +19,7 @@ class OpenLaneDataset(Dataset):
         self.data_prefix = config.get('data_prefix', '')
         self.max_points_in_grid = config['max_points_in_grid']
         
+        self.all_meta = []
         self.all_data = self._preload()
         self.data_len = len(self.all_data)
         
@@ -25,10 +29,17 @@ class OpenLaneDataset(Dataset):
         if self.data_prefix:
             _data = [osp.join(self.data_prefix, i) for i in _data]
         for _val in tqdm(_data):
-            all_data.append(self.parse_openlane(_val))
+            parse_res = self.parse_openlane(_val)
+            if parse_res is not None:
+                all_data.append(parse_res[0])
+                self.all_meta.append(parse_res[1])
+                
         return all_data
         
     def parse_openlane(self, json_file: str) -> List:
+        def map_cat(old_cat: int) -> int:
+            return old_cat if old_cat <= 12 else old_cat-7
+        
         _json = load_json(json_file)
         all_lines = _json['lane_lines']
         new_lines = []
@@ -36,28 +47,41 @@ class OpenLaneDataset(Dataset):
         for idx, sline in enumerate(all_lines):
             category = sline['category']
             coord = sline['uv'] # 2*n
-            all_category.append(category)
-            for pts_idx in range(len(coord[0])):
-                ori_x = coord[0][pts_idx]
-                ori_y = coord[1][pts_idx]
-                norm_x = ori_x / 1920 * 1280
-                norm_y = ori_y / 1280 * 1280
-                new_lines.append([norm_x, norm_y, idx])
+            single_line = np.array(coord)
+            if single_line.shape[1] < 5:
+                continue
+            single_line[0, :] = single_line[0, :] / 1920 * 1280
+            single_line[1, :] = single_line[1, :] / 1280 * 1280
+            inter_line = _interp1d(single_line, inter_val=1.)
+            new_lines.append(inter_line)
+            
+            new_cat = map_cat(category)
+            all_category += [new_cat] * inter_line.shape[1]
+        
+        if len(new_lines) == 0:
+            return None
+   
+        all_category = np.array(all_category) / 7. -1
+        all_category = all_category.reshape((1, -1))
+        new_lines = np.concatenate(new_lines, axis=1)
+        new_lines = np.concatenate([new_lines, all_category], axis=0)
+            
         # TODO 
         # 生成新的label
         gt = 0
-        if len(new_lines) >7:
-            gt = 1
+        if len(all_lines) > 5:
+            gt = 1    
         map = Map(128, 128, 10, self.max_points_in_grid)
-        for d in new_lines:
-            map.add_point(d[0], d[1], type=d[2], valid=1)
+        for _pi in range(new_lines.shape[1]):
+            map.add_point(new_lines[0][_pi], new_lines[1][_pi], type=new_lines[2][_pi], valid=1.)
         return map, gt
     
     def __getitem__(self, idx=None):
         if idx is None:
             idx = np.random.randint(self.data_len)
             
-        _map, label = self.all_data[idx]
+        _map = self.all_data[idx]
+        label = self.all_meta[idx]
         
         out = {}
         feat = torch.from_numpy(_map.get_feature()).float()
